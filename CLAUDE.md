@@ -2,87 +2,95 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Project
+## Repository layout
 
-Premium scroll-driven 3D car website — **Mercedes-Benz 300 SL Gullwing** showcase. Retro-prestige aesthetic: sepia tones, old-film grain, Cormorant Garamond typography. 7 sections. Real GLTF car model.
+All application code lives under `app/`. Run every command from that directory.
+
+```
+app/
+  api/          Vercel serverless functions (enquire.ts, leads.ts, admin-auth.ts)
+  public/
+    draco/      Self-hosted Draco decoder for compressed GLB loading
+    models/     GLB car models (ferrari.glb, gullwing.glb, jaguar.glb, mclaren.glb, …)
+    videos/     hero.webm / hero.mp4 background video
+  src/
+    components/
+      canvas/   R3F scene components (CarCanvas, <Car>Scene, <Car>Car, Environment, PostProcessing)
+      layout/   Navbar, CarNavbar
+      sections/ Section overlay components (GenericSection, StarSection, …)
+      ui/       Utility UI (EnquiryModal, AuthModal, PageMeta, ErrorBoundary, …)
+    constants/  Per-car section definitions (<car>Sections.ts) + theme.ts + hotspots.ts + rivalries.ts
+    contexts/   AuthContext (Supabase auth, nullable)
+    hooks/      useScrollProgress, useCarPage, use<Car>Animation, useIsMobile
+    lib/        animationUtils.ts, gsap.ts, supabase.ts, materialUtils.ts
+    pages/      One page component per route
+    types/      Section, Stat, CarTransform, Keyframe interfaces
+```
 
 ## Commands
 
+All commands must be run from `app/`:
+
 ```bash
-cd app
-npm run dev       # dev server (localhost:5173)
-npm run build     # TypeScript check + Vite production build
-npm run preview   # preview production build
+npm run dev       # Vite dev server
+npm run build     # tsc -b && vite build
+npm run lint      # ESLint (src + api), --max-warnings 0
+npm run preview   # Preview the dist build
 ```
 
-## Tech Stack
+No test runner is configured.
 
-- **React 18 + Vite + TypeScript** (`verbatimModuleSyntax` — always `import type` for types)
-- **React Three Fiber + @react-three/drei** — 3D canvas, `useGLTF`, `MeshReflectorMaterial`
-- **@react-three/postprocessing** — `HueSaturation`, `Noise` (film grain), `Vignette`
-- **GSAP ScrollTrigger** — scroll progress driver
-- **Framer Motion** — section text animations
-- **Tailwind CSS v3** — CSS custom property tokens
+## Core architecture
 
-## 3D Model
+### Scroll-driven 3D presentation
 
-`app/public/models/gullwing.glb` — Mercedes-Benz 300 SL Gullwing, converted from OBJ (Sketchfab). Materials are entirely overridden in `GullwingCar.tsx` (body: dark graphite, chrome trim). The model is auto-centered and scaled to 4.2 units via bounding box in a `useEffect`.
+Each car page is a fullscreen sticky scroll experience:
 
-## Architecture
+1. `#scroll-container` is a tall div (e.g. `2000vh`). The sticky child holds the 3D canvas + overlay text at `height: 100svh`.
+2. `useScrollProgress()` creates a GSAP `ScrollTrigger` on `#scroll-container` and writes `self.progress` (0–1) into a `progressRef` (`MutableRefObject<number>`). This ref is passed by reference into the R3F canvas — no re-renders on scroll.
+3. Inside the R3F canvas, `use<Car>Animation()` hooks run in `useFrame` and read `progressRef.current` every frame, interpolating between typed `Keyframe[]` arrays to drive camera position and car rotation via `interpolateKeyframes()` in `src/lib/animationUtils.ts`.
+4. `useActiveSection()` runs a `requestAnimationFrame` loop outside the canvas, polling `progressRef.current` against each section's `progressStart`/`progressEnd` range to determine which section is active. Section overlays are rendered in a `z-10` absolute div layered over the canvas.
 
-### Scroll System
+### Adding a new car
 
-Tall `div#scroll-container` (`750vh`) with a `position: sticky; height: 100vh` wrapper. GSAP ScrollTrigger writes scroll progress into `progressRef` (a plain `useRef<number>` — no state, no re-renders). R3F `useFrame` reads that ref each tick.
+Follow the existing pattern:
+- `src/constants/<car>Sections.ts` — define `Section[]` with `progressStart`/`progressEnd` fractions and export a `TOTAL_SCROLL_HEIGHT` string (e.g. `'2000vh'`)
+- `src/hooks/use<Car>Animation.ts` — define `KEYFRAMES: Keyframe[]` and `LOOKAT_Y: number[]`, use `interpolateKeyframes` + `useFrame` (copy `useFerrariAnimation.ts`)
+- `src/components/canvas/<Car>Car.tsx` — load the GLB via `useGLTF`, apply `materialUtils`, wrap in `forwardRef<Group>`
+- `src/components/canvas/<Car>Scene.tsx` — compose `CarCanvas` + `SceneContent` + `SceneLoadingOverlay`
+- `src/pages/<Car>Page.tsx` — wire up `useScrollProgress`, `useActiveSection`, `CarNavbar`, `GenericSection`/`StarSection` overlays, mobile fallback via `useIsMobile` → `CarMobilePage`
+- Register the route in `src/main.tsx` as a lazy import
 
-**Key file:** `src/hooks/useScrollProgress.ts`
+### Design system
 
-### Scroll → 3D Animation
+Colors are CSS custom properties stored as **space-separated RGB tuples** (not hex) so Tailwind's opacity modifiers (`bg-accent/60`) work correctly.
 
-`src/hooks/useCarAnimation.ts` — keyframe table (14 entries) maps `progress` (0–1) to camera + car transforms. Smoothstep easing + `lerpFactor = 1 - 0.06^delta` for cinematic lag. `lookAtY` also interpolates per-keyframe so camera target changes with sections (interior section looks further up).
+Global defaults in `src/index.css`:
+- `--color-background`: `8 7 5` (near-black showroom)
+- `--color-accent`: `176 148 90` (warm automotive gold)
+- `--color-text`: `220 215 205` (warm near-white)
 
-### Section System
+Each car page overrides these on its root `<div>` via an inline `style` prop to apply the car's brand palette (e.g. Ferrari sets `--color-accent: '176 28 20'`). Mobile pages pass `accentCss`/`bgCss`/`surfaceCss` string props directly to `CarMobilePage`.
 
-7 sections in `src/constants/sections.ts` with `progressStart`/`progressEnd` ranges. `App.tsx` runs one consolidated rAF loop — only calls `setActiveId` when the section actually changes. `ProgressBar` and `Navbar` update the DOM directly (no React state) at 60fps.
+Tailwind font families: `font-display` → Cormorant Garamond (headings), `font-body` → EB Garamond (body text). Path aliases: `@`, `@components`, `@hooks`, `@lib`, `@constants`, `@pages`.
 
-### Film Aesthetic
+### Bundle splitting
 
-- **CSS film grain**: animated SVG noise pseudo-element on `#root::after` (z-index 9999, `mix-blend-mode: overlay`)
-- **Three.js post**: `HueSaturation(saturation: -0.38)` + `Noise` + `Vignette`
-- **Fonts**: Cormorant Garamond (display, italic for headings) + EB Garamond (body)
+`vite.config.ts` isolates Three.js/R3F/postprocessing into a `three` chunk and GSAP into a `gsap` chunk. Car pages are lazy-loaded in `main.tsx` via `React.lazy` so the homepage never downloads these large dependencies. `useGLTF.setDecoderPath('/draco/')` is called once at startup so compressed GLBs resolve the self-hosted decoder.
+
+### Backend (Vercel serverless)
+
+`app/api/` contains Vercel Node.js serverless functions:
+- `enquire.ts` — validates form submissions, stores leads in Supabase, sends Resend email notifications (rate-limited at 5/hour per IP)
+- `leads.ts` — admin-facing lead retrieval
+- `admin-auth.ts` — admin session verification
+
+Required environment variables for the API: `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `RESEND_API_KEY`, `RESEND_FROM`, `RESEND_NOTIFY_EMAIL`, `SITE_URL`.
+
+### Auth
+
+`src/lib/supabase.ts` exports a nullable `supabase` client — it is `null` when `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` are unset. All consumers guard against `null`. `AuthContext` gracefully disables itself when Supabase is unconfigured.
 
 ### Mobile
 
-`useIsMobile` → `<MobileFallback />` — static scroll with SVG car silhouette, no WebGL.
-
-## Key Files
-
-| File | Purpose |
-|------|---------|
-| `src/constants/sections.ts` | All 7 section content + scroll ranges |
-| `src/hooks/useScrollProgress.ts` | GSAP → `progressRef` |
-| `src/hooks/useCarAnimation.ts` | 14-keyframe camera/car interpolation table |
-| `src/components/canvas/GullwingCar.tsx` | GLTF load, material override, wheel spin |
-| `src/components/canvas/CarScene.tsx` | R3F Canvas, warm tungsten lighting setup |
-| `src/components/canvas/PostProcessing.tsx` | Film desaturation + grain + vignette |
-| `src/App.tsx` | Sticky scroll architecture, 7-section mount |
-
-## Sections (in order)
-
-| ID | Progress | Camera |
-|----|----------|--------|
-| `heritage` | 0–12% | Wide 3/4, overhead |
-| `design` | 12–27% | Low side profile |
-| `engine` | 27–43% | Front 3/4 |
-| `doors` | 43–58% | Overhead, see roofline |
-| `interior` | 58–73% | Close overhead cockpit |
-| `legacy` | 73–88% | Wide dramatic pull-back |
-| `acquire` | 88–100% | Elegant final pose |
-
-## Design Tokens
-
-| Token | Value |
-|-------|-------|
-| `--color-background` | `#080705` (warm near-black) |
-| `--color-accent` | `#9e8a72` (sepia brown) |
-| Font display | Cormorant Garamond, italic weight |
-| Font body | EB Garamond |
+`useIsMobile()` detects viewport width < 768px. Car pages render `<CarMobilePage>` (static image layout, no 3D canvas) on mobile — the R3F canvas is never mounted on mobile.
