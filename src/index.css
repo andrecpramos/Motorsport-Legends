@@ -1,0 +1,91 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Space-separated RGB tuples — required for Tailwind opacity modifiers to work.
+   e.g. text-accent/60 → color: rgb(var(--color-accent) / 0.6) = valid CSS */
+:root {
+  --color-background: 8 7 5;       /* #080705 — near-black showroom */
+  --color-surface:    16 14 11;    /* #100e0b */
+  --color-accent:     176 148 90;  /* #b0945a — warm automotive gold */
+  --color-text:       220 215 205; /* #dcd7cd — warm near-white */
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html { scroll-behavior: auto; }
+
+body {
+  background: rgb(var(--color-background));
+  color: rgb(var(--color-text));
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+#root {
+  width: 100%;
+  min-height: 100vh;
+}
+
+/* Film grain — animates to simulate celluloid noise */
+#root::after {
+  content: '';
+  position: fixed;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.08'/%3E%3C/svg%3E");
+  opacity: 0.055;
+  animation: filmgrain 0.35s steps(1) infinite;
+  pointer-events: none;
+  z-index: 9999;
+  mix-blend-mode: soft-light;
+}
+
+@keyframes filmgrain {
+  0%  { transform: translate(0, 0) }
+  10% { transform: translate(-3%, -2%) }
+  20% { transform: translate(2%, 3%) }
+  30% { transform: translate(-1%, 4%) }
+  40% { transform: translate(4%, -1%) }
+  50% { transform: translate(-2%, 2%) }
+  60% { transform: translate(3%, -3%) }
+  70% { transform: translate(-4%, 2%) }
+  80% { transform: translate(2%, -2%) }
+  90% { transform: translate(-2%, 3%) }
+}
+
+/* Body copy — old-press letter-spacing */
+.font-body {
+  letter-spacing: 0.01em;
+}
+
+/* Italic body copy inherits a touch more tracking — mimics hand-set type */
+.font-body.italic, em {
+  letter-spacing: 0.015em;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-track { background: rgb(var(--color-background)); }
+::-webkit-scrollbar-thumb { background: rgba(176, 148, 90, 0.35); }
+
+/* Reduced motion — disable decorative animations for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  #root::after {
+    animation: none;
+  }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
