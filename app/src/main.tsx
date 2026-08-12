@@ -2,17 +2,18 @@ import { StrictMode, lazy, Suspense } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import './index.css'
-import GullwingPage from './pages/GullwingPage.tsx'
 import { CookieBanner } from './components/ui/CookieBanner.tsx'
 import { AuthProvider } from './contexts/AuthContext.tsx'
 import { PageLoader } from './components/ui/PageLoader.tsx'
-import { useGLTF } from '@react-three/drei'
 
-// Point useGLTF at our self-hosted Draco decoder so compressed GLBs load correctly
-useGLTF.setDecoderPath('/draco/')
+// NOTE: nothing in this file may statically import three / @react-three / gsap.
+// Doing so pulls the ~1.35 MB `three` chunk into the entry graph, so every route
+// — including the homepage — downloads it before first paint. The Draco decoder
+// path now lives in src/lib/gltf.ts, imported only by canvas components.
 
 // Lazy-load car pages so only the active page's 3D assets are bundled per route
 const HomePage    = lazy(() => import('./pages/HomePage.tsx'))
+const GullwingPage = lazy(() => import('./pages/GullwingPage.tsx'))
 const FerrariPage  = lazy(() => import('./pages/FerrariPage.tsx'))
 const JaguarPage   = lazy(() => import('./pages/JaguarPage.tsx'))
 const MclarenPage  = lazy(() => import('./pages/MclarenPage.tsx'))

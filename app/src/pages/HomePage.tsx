@@ -6,8 +6,14 @@ import { useAuth } from '../contexts/AuthContext'
 import { motion, useMotionValue, useSpring } from 'framer-motion'
 
 // ─── Video background ─────────────────────────────────────────────────────────
-// Place your Le Mans video at: public/videos/lemans.mp4
-// Any royalty-free racing footage works — the video is muted and looped.
+// Source files live in public/videos/ — hero.webm (VP9, ~1.1 MB) is offered first,
+// hero.mp4 (H.264, ~2.0 MB) is the fallback, and hero-poster.jpg paints the first
+// frame instantly. Keep these encoded for the web: the video autoplays on the
+// landing route, so an oversized master file blocks the homepage for everyone.
+// Re-encode with:
+//   ffmpeg -i master.mp4 -vf scale=1600:-2 -c:v libx264 -crf 28 -preset slow \
+//          -pix_fmt yuv420p -movflags +faststart -an hero.mp4
+//   ffmpeg -i master.mp4 -vf scale=1440:-2 -c:v libvpx-vp9 -crf 44 -b:v 0 -an hero.webm
 
 function VideoBackground() {
   return (

@@ -19,17 +19,28 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
+          const path = id.replace(/\\/g, '/')
+
+          // React must be claimed FIRST and explicitly. A named manual chunk
+          // absorbs any unassigned module in its dependency closure, and
+          // @react-three/fiber depends on react + react-dom — so without this
+          // rule React gets swallowed into the `three` chunk. The entry then
+          // has to download all 1.35 MB of Three.js just to boot React, on
+          // every route including the homepage.
+          if (/\/node_modules\/(react|react-dom|react-is|scheduler|use-sync-external-store)\//.test(path))
+            return 'react'
+
           // Isolate Three.js + R3F ecosystem into a deferred chunk.
           // This chunk only loads when the user navigates to a car page —
           // the homepage never downloads it.
           if (
-            id.includes('node_modules/three') ||
-            id.includes('node_modules/@react-three') ||
-            id.includes('node_modules/postprocessing')
+            /\/node_modules\/three\//.test(path) ||
+            path.includes('/node_modules/@react-three/') ||
+            path.includes('/node_modules/postprocessing/')
           ) return 'three'
 
           // GSAP in its own chunk — only car pages need it
-          if (id.includes('node_modules/gsap')) return 'gsap'
+          if (path.includes('/node_modules/gsap/')) return 'gsap'
         },
       },
     },

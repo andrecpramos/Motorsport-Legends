@@ -1,0 +1,7 @@
+# Uncompressed source assets kept for re-exporting only — the app ships the
+# Draco-compressed copies in public/models/ and the web-encoded hero in
+# public/videos/. Uploading these adds ~90 MB to every deployment.
+*.glb
+*.mp4
+dist
+node_modules

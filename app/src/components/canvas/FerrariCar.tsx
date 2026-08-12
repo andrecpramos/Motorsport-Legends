@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, forwardRef } from 'react'
-import { useGLTF } from '@react-three/drei'
+import { useGLTF } from '../../lib/gltf'
 import { useFrame } from '@react-three/fiber'
 import { Box3, DoubleSide, Group, Mesh, MeshStandardMaterial, Object3D, Vector3 } from 'three'
 import { createGlassMaterial, fitSceneToSize } from '../../lib/materialUtils'

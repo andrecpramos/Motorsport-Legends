@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, forwardRef } from 'react'
 import { useFrame } from '@react-three/fiber'
-import { useGLTF } from '@react-three/drei'
+import { useGLTF } from '../../lib/gltf'
 import { Box3, DoubleSide, Group, Mesh, MeshStandardMaterial, Vector3 } from 'three'
 import { createGlassMaterial } from '../../lib/materialUtils'
 import { GULLWING_HOTSPOTS } from '../../constants/hotspots'

@@ -1,6 +1,8 @@
 import { useRef, Suspense } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
-import { useGLTF, Environment } from '@react-three/drei'
+import { Environment } from '@react-three/drei'
+import { useGLTF } from '../../lib/gltf'
+import { WAREHOUSE_HDR } from './Environment'
 import { ACESFilmicToneMapping, Box3, Group, MathUtils, Vector3 } from 'three'
 
 const BG = '#080705'
@@ -110,7 +112,7 @@ export function MobileCarScene({ progressRef }: MobileCarSceneProps) {
       <directionalLight position={[7, 4, -4]}  intensity={2.0}  color="#8095bb" />
       <ambientLight intensity={0.05} />
 
-      <Environment preset="warehouse" />
+      <Environment files={WAREHOUSE_HDR} />
 
       <Suspense fallback={null}>
         <MobileCar progressRef={progressRef} />

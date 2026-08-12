@@ -76,7 +76,27 @@ Tailwind font families: `font-display` → Cormorant Garamond (headings), `font-
 
 ### Bundle splitting
 
-`vite.config.ts` isolates Three.js/R3F/postprocessing into a `three` chunk and GSAP into a `gsap` chunk. Car pages are lazy-loaded in `main.tsx` via `React.lazy` so the homepage never downloads these large dependencies. `useGLTF.setDecoderPath('/draco/')` is called once at startup so compressed GLBs resolve the self-hosted decoder.
+`vite.config.ts` isolates Three.js/R3F/postprocessing into a `three` chunk, React into a `react` chunk, and GSAP into a `gsap` chunk. Car pages — **including `GullwingPage`** — are lazy-loaded in `main.tsx` via `React.lazy` so the homepage never downloads these large dependencies.
+
+Two invariants keep the ~1.35 MB `three` chunk off the homepage. Both have regressed before; verify after any change to `main.tsx`, `vite.config.ts`, or a homepage component:
+
+1. **Nothing in the entry graph may statically import `three` / `@react-three/*` / `gsap`.** The entry graph is `main.tsx` plus everything `HomePage` reaches — `TimelineSection`, `CookieBanner`, `AuthContext`, `PageLoader`. `TimelineSection` hover-preloads models through a dynamic `import('../../lib/gltf')` for exactly this reason. The Draco decoder path lives in `src/lib/gltf.ts` (which re-exports `useGLTF`) rather than `main.tsx`; canvas components import `useGLTF` from there, never from drei directly.
+2. **`manualChunks` must claim `react`/`react-dom`/`scheduler` before the `three` rule.** A named manual chunk absorbs unassigned modules in its dependency closure, and `@react-three/fiber` depends on React — so without an explicit `react` chunk, React is swallowed into `three` and the entry downloads all of Three.js just to boot.
+
+Verify with `npm run build` then check `dist/index.html`: the `modulepreload` list should contain only the entry, `rolldown-runtime`, `react`, `proxy` (framer-motion), and the CSS. If `three` or `gsap` appear there, invariant 1 or 2 is broken.
+
+### Static assets and third-party fetches
+
+Everything the renderer needs at runtime is first-party — no CDN calls on the critical path:
+- `public/draco/` — Draco decoder. All GLBs in `public/models/` declare `KHR_draco_mesh_compression` as *required*, so `setDecoderPath` must run before the first `useGLTF` call.
+- `public/hdri/empty_warehouse_01_1k.hdr` — self-hosted copy of drei's `warehouse` preset. **Do not use `<Environment preset="…">`**: it resolves to `raw.githack.com`, a rate-limited third-party proxy, and it suspends inside the Canvas, so a stall hangs the scene behind the loading overlay. Pass `files={WAREHOUSE_HDR}` (exported from `components/canvas/Environment.tsx`) instead.
+- `public/videos/hero.{webm,mp4}` + `hero-poster.jpg` — the hero autoplays on the landing route, so these must stay web-encoded (~1.1 MB / ~2.0 MB). The master file is not in the repo; re-encode commands are in the comment at the top of `HomePage.tsx`.
+
+### Deployment
+
+The Vercel project's **Root Directory is `app`**, so `app/vercel.json` is the only config Vercel reads and `app/api/` deploys as serverless functions. Do not add a second `vercel.json` at the repo root — it is silently ignored and drifts out of sync.
+
+The SPA rewrite in `app/vercel.json` deliberately excludes `api/`, `assets/`, `models/`, `draco/`, `hdri/`, `videos/` and any path containing a dot. A blanket `/(.*)` → `/index.html` rewrite answers a missing `.glb` or `/api/*` route with HTML and a 200, so the GLTF parser chokes on markup and the scene hangs on the loading overlay instead of failing loudly. Add new asset directories to that exclusion list.
 
 ### Backend (Vercel serverless)
 

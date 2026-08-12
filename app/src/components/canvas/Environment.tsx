@@ -3,6 +3,9 @@ import { useFrame } from '@react-three/fiber'
 import { Environment as DreiEnvironment, MeshReflectorMaterial } from '@react-three/drei'
 import { BufferAttribute, Color, PointLight, Points, PointsMaterial, ShaderMaterial } from 'three'
 
+/** Self-hosted copy of drei's `warehouse` preset HDR — see SceneEnvironment below. */
+export const WAREHOUSE_HDR = '/hdri/empty_warehouse_01_1k.hdr'
+
 // ─── Shared orbit light — slow-sweeping highlight across bodywork ─────────────
 
 interface OrbitLightProps {
@@ -114,8 +117,12 @@ export function SceneEnvironment({ fogColor = '#080705' }: { fogColor?: string }
 
   return (
     <>
-      {/* Warehouse preset — dark industrial environment, great for metallic reflections */}
-      <DreiEnvironment preset="warehouse" />
+      {/* Warehouse HDR — dark industrial environment, great for metallic reflections.
+          Self-hosted rather than using drei's `preset="warehouse"`: that resolves to
+          raw.githack.com, a third-party proxy that is rate-limited and prone to stalls.
+          It suspends inside the Canvas, so a slow response hangs the whole scene behind
+          the loading overlay. Same reasoning as the self-hosted Draco decoder. */}
+      <DreiEnvironment files={WAREHOUSE_HDR} />
       <fog attach="fog" args={[fogColor, 18, 45]} />
 
       {/* Dark gloss showroom floor */}

@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { useGLTF } from '@react-three/drei'
 
 // Preload map: route → model path. Called on card hover so the model
 // starts downloading before the user navigates to the page.
@@ -11,6 +10,20 @@ const MODEL_PRELOAD_MAP: Record<string, string> = {
   '/jaguar':     '/models/jaguar.glb',
   '/mclaren':    '/models/mclaren.glb',
   '/porsche911':  '/models/porsche911.glb',
+}
+
+// This component renders on the homepage, so it must NOT statically import
+// @react-three/drei — that pulls the ~1.35 MB `three` chunk into the homepage
+// bundle. Hover-preload loads it on demand instead: by the time the user is
+// hovering a card they are likely to navigate, so the cost is well spent.
+const preloading = new Set<string>()
+
+function preloadModel(path: string) {
+  if (preloading.has(path)) return
+  preloading.add(path)
+  import('../../lib/gltf')
+    .then(({ useGLTF }) => useGLTF.preload(path))
+    .catch(() => { preloading.delete(path) })
 }
 
 // ─── Animated intro panel ─────────────────────────────────────────────────────
@@ -526,7 +539,7 @@ function CarCard({ car }: { car: CarEvent }) {
     setHovered(true)
     // Preload the 3D model while the user is reading the card
     if (car.href && MODEL_PRELOAD_MAP[car.href]) {
-      useGLTF.preload(MODEL_PRELOAD_MAP[car.href])
+      preloadModel(MODEL_PRELOAD_MAP[car.href])
     }
   }
 
