@@ -1,0 +1,8 @@
+# cmd.exe parses an LF-only batch file by eating the first character of every
+# line, and fails in a way that gives no hint as to the cause. Pin CRLF so a
+# checkout on any platform produces a dev.bat that runs.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# The POSIX twin must stay LF, or bash reports "\r: command not found".
+*.sh text eol=lf

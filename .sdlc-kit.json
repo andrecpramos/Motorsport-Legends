@@ -1,0 +1,171 @@
+{
+  "kitVersion": 1,
+  "completedPhases": [
+    "assessment",
+    "governance",
+    "requirements",
+    "architecture",
+    "implementation",
+    "review",
+    "testing",
+    "security",
+    "cicd",
+    "operations",
+    "documentation"
+  ],
+  "project": {
+    "stack": "node",
+    "label": "Node / JavaScript / TypeScript",
+    "installCommand": "cd app && npm install",
+    "runCommand": "cd app && npm run dev",
+    "toolCheck": "node --version",
+    "testCommand": "TODO(setup): no test runner is configured yet",
+    "lintCommand": "cd app && npm run lint --if-present",
+    "buildCommand": "cd app && npm run build --if-present",
+    "sourceDirs": [
+      "app/src"
+    ],
+    "sourceExtensions": [
+      ".js",
+      ".mjs",
+      ".ts",
+      ".tsx",
+      ".jsx"
+    ],
+    "ciSetup": "      - uses: actions/setup-node@v4\n        with:\n          node-version: '22'\n          cache: 'npm'\n          cache-dependency-path: app/package-lock.json\n\n      - name: Install\n        run: cd app && npm ci",
+    "workdir": "app",
+    "name": "Motorsport Legends",
+    "description": "A scroll-driven 3D showroom for classic and modern performance cars, with an enquiry form that captures buyer leads.",
+    "isGitRepo": true,
+    "hasGithub": false,
+    "stackLabel": "Node / JavaScript / TypeScript"
+  },
+  "answers": {
+    "writeAssessment": true,
+    "dataClassification": "public",
+    "teamSize": "solo",
+    "baselineWindow": "4 weeks",
+    "metricsAvailable": "partial",
+    "rollbackTrigger": "Change failure rate rises above 15% for two consecutive weeks and the increase is not explained by an unrelated incident",
+    "tracker": "GitHub Issues",
+    "useGherkin": true,
+    "architectureStyle": "frontend",
+    "invariants": [
+      "Nothing in the entry graph (main.tsx, HomePage and everything it reaches) may statically import three, @react-three/* or gsap - it ships the 1.35 MB three chunk to every homepage visitor",
+      "manualChunks must claim react/react-dom/scheduler before the three rule, or React is swallowed into the three chunk and the entry downloads all of Three.js just to boot",
+      "Never use the drei `Environment preset` prop - it resolves to raw.githack.com and suspends inside the Canvas; pass `files={WAREHOUSE_HDR}` instead",
+      "The SPA rewrite in app/vercel.json must keep excluding api/, assets/, models/, draco/, hdri/, videos/ and any dotted path - a blanket rewrite answers a missing .glb with HTML and a 200",
+      "Colours are space-separated RGB tuples, never hex, so Tailwind opacity modifiers like bg-accent/60 work",
+      "setDecoderPath must run before the first useGLTF call - every GLB in public/models declares Draco compression as required"
+    ],
+    "agentTools": [
+      "agents",
+      "claude",
+      "copilot"
+    ],
+    "dependencyPolicy": "never",
+    "rejectedSuggestions": [],
+    "usesDocker": false,
+    "envExample": true,
+    "devScripts": [
+      "bat",
+      "sh"
+    ],
+    "agentRoster": [
+      "code-reviewer",
+      "test-strategist",
+      "security-reviewer",
+      "requirements-auditor",
+      "adr-author",
+      "build-triage",
+      "incident-responder",
+      "doc-keeper"
+    ],
+    "skills": [
+      "write-adr",
+      "clarify-requirements",
+      "pre-pr-check",
+      "assess-change-risk"
+    ],
+    "humanReviewRule": "risk-based",
+    "traceabilityRule": true,
+    "coverageGate": false,
+    "assertionRule": true,
+    "agentPrivileges": "push",
+    "sensitiveSurfaces": [
+      "auth",
+      "personal",
+      "untrusted"
+    ],
+    "secretPaths": [
+      ".env",
+      ".env.*",
+      "*.pem",
+      "*.key",
+      "secrets/"
+    ],
+    "secretScanInCi": true,
+    "ciProvider": "github",
+    "deployTarget": "Push to main - Vercel builds from the app/ root directory and deploys to production",
+    "rollbackExercised": false,
+    "installRiskCheck": true,
+    "hotPaths": [
+      {
+        "pattern": "app/vite\\.config\\.ts",
+        "weight": 20,
+        "why": "manualChunks ordering keeps the 1.35 MB three chunk off the homepage"
+      },
+      {
+        "pattern": "app/src/main\\.tsx",
+        "weight": 20,
+        "why": "the entry graph; one static import here ships Three.js to every visitor"
+      },
+      {
+        "pattern": "app/vercel\\.json",
+        "weight": 20,
+        "why": "SPA rewrite exclusions; a blanket rewrite makes missing assets return HTML with a 200"
+      },
+      {
+        "pattern": "app/api/",
+        "weight": 20,
+        "why": "serverless functions handling personal data and the admin token"
+      },
+      {
+        "pattern": "^\\.github/workflows/",
+        "weight": 20,
+        "why": "pipeline changes can disable the checks that protect the release"
+      },
+      {
+        "pattern": "^(AGENTS|CLAUDE)\\.md$|^\\.github/copilot-instructions\\.md$|^\\.cursor/",
+        "weight": 15,
+        "why": "agent instruction files — a change here affects every future generated change"
+      },
+      {
+        "pattern": "(package-lock\\.json|yarn\\.lock|pnpm-lock\\.yaml|poetry\\.lock|Cargo\\.lock|go\\.sum)$",
+        "weight": 15,
+        "why": "dependency change — supply chain surface"
+      },
+      {
+        "pattern": "migrations?/",
+        "weight": 22,
+        "why": "schema change — hard to roll back"
+      },
+      {
+        "pattern": "(^|/)(auth|authz|permissions|crypto|secrets)[./]",
+        "weight": 20,
+        "why": "security boundary"
+      }
+    ],
+    "primarySli": "Car pages reach an interactive 3D scene rather than hanging on the loading overlay",
+    "sloTarget": "99.9% over a rolling 30 days",
+    "onCall": false,
+    "installDocDrift": true,
+    "docDriftGatesCi": true,
+    "hotPathLines": [
+      "app/vite.config.ts - manualChunks ordering keeps the 1.35 MB three chunk off the homepage",
+      "app/src/main.tsx - the entry graph; one static import here ships Three.js to every visitor",
+      "app/vercel.json - SPA rewrite exclusions; a blanket rewrite makes missing assets return HTML with a 200",
+      "app/api/ - serverless functions handling personal data and the admin token"
+    ]
+  }
+}
